@@ -1,0 +1,75 @@
+// ===============================
+// 自動でミュート解除するスクリプト
+// ===============================
+
+// ミュート解除済みユーザーのラベルを記録するセット（重複防止）
+let unmuted = new Set();
+
+// ミュート解除した人数のカウンター
+let totalClicked = 0;
+
+// 新しいユーザーが見つからずスクロールした回数（終了判定用）
+let scrollAttempts = 0;
+
+// 最大何回スクロールするか（新しい解除対象が出なかったら終了）
+const MAX_SCROLL_ATTEMPTS = 30;
+
+// -------------------------------
+// 現在表示中の「ミュート解除」ボタンをすべて取得する関数
+// -------------------------------
+function findUnmutedButtons() {
+  return Array.from(
+    document.querySelectorAll('button[aria-label*="さんのミュートを解除"]')
+  )
+    // すでに処理済み（unmutedにある）ボタンは除外
+    .filter(btn => !unmuted.has(btn.getAttribute('aria-label')));
+}
+
+// -------------------------------
+// 1件ずつミュート解除 → スクロール → 再呼び出し を繰り返す処理
+// -------------------------------
+function clickAndScrollLoop() {
+  const buttons = findUnmutedButtons(); // 新しいボタンを取得
+
+  // ボタンが見つからない場合の処理（→スクロール試行 or 終了）
+  if (buttons.length === 0) {
+    if (scrollAttempts >= MAX_SCROLL_ATTEMPTS) {
+      console.log("✅ 全ての処理が完了しました");
+      return; // 終了
+    }
+
+    // ページをスクロールして新しいユーザーを読み込む
+    window.scrollBy(0, 1500);
+    scrollAttempts++; // スクロール回数をカウント
+    console.log(`🔄 スクロール試行 ${scrollAttempts}/${MAX_SCROLL_ATTEMPTS}`);
+
+    // 少し待ってから再試行（読み込みに時間がかかるため）
+    setTimeout(clickAndScrollLoop, 1500);
+    return;
+  }
+
+  // ミュート解除対象ボタンが見つかった場合の処理
+  const btn = buttons[0]; // 最初のボタンを選ぶ（1件ずつ処理）
+  const label = btn.getAttribute('aria-label'); // ユーザー名のラベルを取得
+
+  unmuted.add(label); // 処理済みに記録（Setに追加）
+
+  // ボタンを画面内にスクロールして見えるようにしてから…
+  btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  // 実際にクリック（ミュート解除）
+  btn.click();
+  totalClicked++;
+  console.log(`🟢 ${totalClicked}人目: ${label} をミュート解除`);
+
+  scrollAttempts = 0; // 成功したのでスクロールカウントをリセット
+
+  // 次の処理に進むために、少し時間を空けて再帰的に呼び出し
+  setTimeout(clickAndScrollLoop, 1200);
+}
+
+// -------------------------------
+// 実行開始！
+// -------------------------------
+console.log("🚀 ミュート解除スクリプト開始します…");
+clickAndScrollLoop();

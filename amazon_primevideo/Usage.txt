@@ -1,0 +1,4 @@
+1.Tampermonkeyをインストール
+2.Tampermonkeyを開き新規スクリプトの追加
+3.PrimeVideo_非表示ボタン.jsの中身をコピペ→保存
+4.アマプラを開くと×アイコンが追加される
