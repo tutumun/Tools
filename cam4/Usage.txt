@@ -1,0 +1,4 @@
+1.Tampermonkeyをインストール
+2.Tampermonkeyを開き新規スクリプトの追加
+3.CAM4_Modal_AutoClose.jsの中身をコピペ→保存
+4.cam4で非ログイン時に定期的に出てくるポップアップを自動で閉じる
