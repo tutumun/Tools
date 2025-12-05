@@ -1,0 +1,4 @@
+1.Tampermonkeyをインストール
+2.Tampermonkeyを開き新規スクリプトの追加
+3.Youbue_history_delete.jsの中身をコピペ→保存
+4.Youtubeの履歴を一つずつ自動で消すボタンが追加される
