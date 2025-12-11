@@ -1,0 +1,34 @@
+// ==UserScript==
+// @name         Auto Uncheck Rakuten Mail Magazine Checkbox
+// @namespace    https://example.com/
+// @version      1.0
+// @description  楽天の「メールマガジンを希望する」チェックボックスを自動でオフにします
+// @match        https://*/*
+// @run-at       document-idle
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    function uncheckBox() {
+        const cb = document.querySelector('#mailMagazineSubscription');
+        if (cb && cb.checked) {
+            cb.checked = false;
+            console.log('[TM] mailMagazineSubscription → チェックを外しました');
+        }
+    }
+
+    // 初期ロード時に実行
+    uncheckBox();
+
+    // SPA / 動的書き換え対策（任意）
+    const observer = new MutationObserver(() => {
+        uncheckBox();
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+})();
