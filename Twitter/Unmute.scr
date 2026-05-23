@@ -1,75 +1,156 @@
 // ===============================
-// 自動でミュート解除するスクリプト
+// X ミュート解除スクリプト 修正版
 // ===============================
 
-// ミュート解除済みユーザーのラベルを記録するセット（重複防止）
-let unmuted = new Set();
+(() => {
+  const processed = new Set();
 
-// ミュート解除した人数のカウンター
-let totalClicked = 0;
+  let totalClicked = 0;
+  let scrollAttempts = 0;
 
-// 新しいユーザーが見つからずスクロールした回数（終了判定用）
-let scrollAttempts = 0;
+  const MAX_SCROLL_ATTEMPTS = 30;
+  const CLICK_INTERVAL_MS = 1800;
+  const SCROLL_WAIT_MS = 1800;
+  const SCROLL_AMOUNT = 1500;
 
-// 最大何回スクロールするか（新しい解除対象が出なかったら終了）
-const MAX_SCROLL_ATTEMPTS = 30;
+  const CANDIDATE_SELECTOR = [
+    'button[aria-label]',
+    '[role="button"][aria-label]',
+    'div[aria-label][tabindex]'
+  ].join(',');
 
-// -------------------------------
-// 現在表示中の「ミュート解除」ボタンをすべて取得する関数
-// -------------------------------
-function findUnmutedButtons() {
-  return Array.from(
-    document.querySelectorAll('button[aria-label*="さんのミュートを解除"]')
-  )
-    // すでに処理済み（unmutedにある）ボタンは除外
-    .filter(btn => !unmuted.has(btn.getAttribute('aria-label')));
-}
-
-// -------------------------------
-// 1件ずつミュート解除 → スクロール → 再呼び出し を繰り返す処理
-// -------------------------------
-function clickAndScrollLoop() {
-  const buttons = findUnmutedButtons(); // 新しいボタンを取得
-
-  // ボタンが見つからない場合の処理（→スクロール試行 or 終了）
-  if (buttons.length === 0) {
-    if (scrollAttempts >= MAX_SCROLL_ATTEMPTS) {
-      console.log("✅ 全ての処理が完了しました");
-      return; // 終了
-    }
-
-    // ページをスクロールして新しいユーザーを読み込む
-    window.scrollBy(0, 1500);
-    scrollAttempts++; // スクロール回数をカウント
-    console.log(`🔄 スクロール試行 ${scrollAttempts}/${MAX_SCROLL_ATTEMPTS}`);
-
-    // 少し待ってから再試行（読み込みに時間がかかるため）
-    setTimeout(clickAndScrollLoop, 1500);
-    return;
+  function getLabel(el) {
+    return el.getAttribute('aria-label') || '';
   }
 
-  // ミュート解除対象ボタンが見つかった場合の処理
-  const btn = buttons[0]; // 最初のボタンを選ぶ（1件ずつ処理）
-  const label = btn.getAttribute('aria-label'); // ユーザー名のラベルを取得
+  function getText(el) {
+    return el.textContent || '';
+  }
 
-  unmuted.add(label); // 処理済みに記録（Setに追加）
+  function normalizeText(text) {
+    return String(text || '').replace(/\s+/g, ' ').trim();
+  }
 
-  // ボタンを画面内にスクロールして見えるようにしてから…
-  btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  function isDisabled(el) {
+    return el.disabled === true || el.getAttribute('aria-disabled') === 'true';
+  }
 
-  // 実際にクリック（ミュート解除）
-  btn.click();
-  totalClicked++;
-  console.log(`🟢 ${totalClicked}人目: ${label} をミュート解除`);
+  function isUnmuteTarget(el) {
+    if (isDisabled(el)) {
+      return false;
+    }
 
-  scrollAttempts = 0; // 成功したのでスクロールカウントをリセット
+    const label = normalizeText(getLabel(el));
+    const text = normalizeText(getText(el));
+    const combined = `${label} ${text}`;
 
-  // 次の処理に進むために、少し時間を空けて再帰的に呼び出し
-  setTimeout(clickAndScrollLoop, 1200);
-}
+    // 明確に「解除」系
+    if (/ミュートを解除|unmute/i.test(combined)) {
+      return true;
+    }
 
-// -------------------------------
-// 実行開始！
-// -------------------------------
-console.log("🚀 ミュート解除スクリプト開始します…");
-clickAndScrollLoop();
+    // X側が「Muted / ミュート済み / ミュート中」ボタンとして出しているケース
+    if (/^(Muted|ミュート済み|ミュート中)$/i.test(label)) {
+      return true;
+    }
+
+    if (/^(Muted|ミュート済み|ミュート中)$/i.test(text)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function getUserKey(el) {
+    const row =
+      el.closest('[data-testid="UserCell"]') ||
+      el.closest('[role="listitem"]') ||
+      el.closest('article') ||
+      el.parentElement;
+
+    const label = normalizeText(getLabel(el));
+    const rowText = normalizeText(row?.innerText || '').slice(0, 200);
+
+    return `${label}__${rowText}`;
+  }
+
+  function findUnmuteButtons() {
+    return Array.from(document.querySelectorAll(CANDIDATE_SELECTOR))
+      .filter(isUnmuteTarget)
+      .filter(el => !processed.has(getUserKey(el)));
+  }
+
+  function clickElement(el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    setTimeout(() => {
+      el.click();
+    }, 300);
+  }
+
+  function clickConfirmDialogIfNeeded() {
+    const dialog = document.querySelector('[role="dialog"]');
+
+    if (!dialog) {
+      return false;
+    }
+
+    const buttons = Array.from(
+      dialog.querySelectorAll('button, [role="button"]')
+    );
+
+    const confirmButton = buttons.find(btn => {
+      const label = normalizeText(getLabel(btn));
+      const text = normalizeText(getText(btn));
+      return /ミュートを解除|unmute/i.test(`${label} ${text}`);
+    });
+
+    if (confirmButton) {
+      confirmButton.click();
+      console.log('🟡 確認ダイアログの解除ボタンをクリックしました');
+      return true;
+    }
+
+    return false;
+  }
+
+  function loop() {
+    const buttons = findUnmuteButtons();
+
+    if (buttons.length === 0) {
+      if (scrollAttempts >= MAX_SCROLL_ATTEMPTS) {
+        console.log(`✅ 完了: ${totalClicked}件のミュート解除を試行しました`);
+        return;
+      }
+
+      window.scrollBy(0, SCROLL_AMOUNT);
+      scrollAttempts++;
+
+      console.log(`🔄 スクロール試行 ${scrollAttempts}/${MAX_SCROLL_ATTEMPTS}`);
+
+      setTimeout(loop, SCROLL_WAIT_MS);
+      return;
+    }
+
+    const btn = buttons[0];
+    const key = getUserKey(btn);
+    const label = normalizeText(getLabel(btn));
+
+    processed.add(key);
+
+    clickElement(btn);
+    totalClicked++;
+
+    console.log(`🟢 ${totalClicked}件目: ${label || 'ラベルなし'} をクリック`);
+
+    setTimeout(() => {
+      clickConfirmDialogIfNeeded();
+
+      scrollAttempts = 0;
+      setTimeout(loop, CLICK_INTERVAL_MS);
+    }, 800);
+  }
+
+  console.log('🚀 X ミュート解除スクリプト開始');
+  loop();
+})();
