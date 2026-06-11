@@ -1,0 +1,1884 @@
+<!doctype html>
+<!-- Version: V0.0.1 -->
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CSVチェックリスト表作成ツール</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --text: #20242c;
+      --muted: #687184;
+      --line: #d9dee8;
+      --line-strong: #aab3c2;
+      --accent: #146c5f;
+      --accent-dark: #0d4f45;
+      --danger: #a6372d;
+      --focus: #2a7de1;
+      --shadow: 0 8px 24px rgba(26, 33, 45, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 44px;
+    }
+
+    h1,
+    h2 {
+      line-height: 1.25;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 1.9rem;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 1.1rem;
+      margin-bottom: 14px;
+    }
+
+    p {
+      margin: 8px 0 0;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      min-height: 42px;
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--text);
+      cursor: pointer;
+      padding: 8px 14px;
+    }
+
+    button:hover:not(:disabled) {
+      border-color: var(--accent);
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+      outline: 3px solid rgba(42, 125, 225, 0.28);
+      outline-offset: 2px;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .button-primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .button-primary:hover:not(:disabled) {
+      background: var(--accent-dark);
+    }
+
+    .button-danger {
+      border-color: #d9aaa5;
+      color: var(--danger);
+    }
+
+    .page-header {
+      margin-bottom: 22px;
+    }
+
+    .description {
+      color: var(--muted);
+      max-width: 820px;
+    }
+
+    .usage-list {
+      margin: 8px 0 0;
+      padding-left: 1.4em;
+    }
+
+    .usage-list li {
+      margin: 4px 0;
+    }
+
+    .usage-accordion {
+      padding: 0;
+    }
+
+    .usage-accordion summary {
+      cursor: pointer;
+      font-weight: 750;
+      list-style: none;
+      padding: 14px 18px;
+      position: relative;
+    }
+
+    .usage-accordion summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .usage-accordion summary::after {
+      content: "+";
+      color: var(--accent);
+      font-size: 1.2rem;
+      line-height: 1;
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .usage-accordion[open] summary::after {
+      content: "-";
+    }
+
+    .usage-body {
+      border-top: 1px solid var(--line);
+      padding: 0 18px 16px;
+    }
+
+    .drop-active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(20, 108, 95, 0.16), var(--shadow);
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      margin-top: 16px;
+      padding: 18px;
+    }
+
+    .input-row,
+    .actions {
+      align-items: end;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label,
+    .column-card label {
+      font-weight: 650;
+    }
+
+    .field input[type="file"],
+    .field select {
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      min-height: 42px;
+      padding: 8px;
+      background: #fff;
+    }
+
+    .status {
+      color: var(--muted);
+      min-height: 1.6em;
+    }
+
+    .status.error {
+      color: var(--danger);
+      font-weight: 650;
+    }
+
+    .result-grid {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      margin-top: 8px;
+    }
+
+    .result-item {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+    }
+
+    .result-label {
+      color: var(--muted);
+      display: block;
+      font-size: 0.86rem;
+    }
+
+    .result-value {
+      font-size: 1.05rem;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .column-toolbar {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .column-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .column-list {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      max-height: 300px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .column-card {
+      align-items: flex-start;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      min-width: 0;
+    }
+
+    .column-card input[type="checkbox"] {
+      flex: 0 0 auto;
+      margin-top: 5px;
+    }
+
+    .column-card-body {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+      width: 100%;
+    }
+
+    .column-name {
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 600;
+      overflow-wrap: anywhere;
+    }
+
+    .display-name-input {
+      border: 1px solid var(--line-strong);
+      border-radius: 5px;
+      min-height: 38px;
+      padding: 7px 8px;
+      width: 100%;
+    }
+
+    .output-preview {
+      border-top: 1px solid var(--line);
+      margin-top: 16px;
+      padding-top: 14px;
+    }
+
+    .output-preview h3 {
+      font-size: 0.98rem;
+      margin: 0 0 8px;
+    }
+
+    .preview-wrap {
+      overflow: auto;
+    }
+
+    .preview-wrap table {
+      min-width: 560px;
+    }
+
+    .table-panel {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .table-header {
+      align-items: center;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      padding: 16px 18px;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      max-height: calc(100vh - 230px);
+      border-top: 1px solid var(--line);
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 720px;
+      background: #fff;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #eef2f6;
+      font-weight: 750;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    td {
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f3f4f6;
+    }
+
+    .check-cell,
+    .note-cell {
+      text-align: center;
+    }
+
+      .check-cell {
+        width: 36px;
+      }
+
+    .check-cell input {
+      height: 22px;
+      width: 22px;
+    }
+
+    .note-cell {
+      width: 240px;
+    }
+
+    .note-input {
+      border: 1px solid var(--line-strong);
+      border-radius: 4px;
+      min-height: 38px;
+      padding: 7px 8px;
+      width: 100%;
+    }
+
+    .mobile-list {
+      display: none;
+    }
+
+    .mobile-row {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr);
+      border-left: 1px solid var(--line-strong);
+      background: #fff;
+    }
+
+    .mobile-row:first-child {
+      border-top: 1px solid var(--line-strong);
+    }
+
+    .mobile-row:nth-child(even) {
+      background: #f3f4f6;
+    }
+
+    .mobile-check {
+      align-items: start;
+      border-bottom: 1px solid var(--line-strong);
+      border-right: 1px solid var(--line-strong);
+      display: flex;
+      justify-content: center;
+      padding-top: 16px;
+    }
+
+    .mobile-check input {
+      height: 22px;
+      width: 22px;
+    }
+
+    .mobile-fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mobile-field {
+      border-bottom: 1px solid var(--line-strong);
+      border-right: 1px solid var(--line-strong);
+      min-width: 0;
+      padding: 8px 9px;
+    }
+
+    .mobile-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 750;
+      overflow-wrap: anywhere;
+    }
+
+    .mobile-value {
+      margin-top: 3px;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .mobile-note {
+      grid-column: 1 / -1;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 18px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 720px) {
+      main {
+        width: min(100% - 20px, 1180px);
+        padding-top: 18px;
+      }
+
+      h1 {
+        font-size: 1.45rem;
+      }
+
+      .panel {
+        padding: 14px;
+      }
+
+      .input-row,
+      .actions {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .field,
+      button {
+        width: 100%;
+      }
+
+      .table-header {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .table-panel {
+        padding: 0;
+      }
+
+      .table-header {
+        padding: 10px 12px;
+      }
+
+      .table-header h2 {
+        display: none;
+      }
+
+      .table-header .actions {
+        align-items: center;
+        flex-direction: row;
+        gap: 8px;
+      }
+
+      .table-header .actions button {
+        flex: 0 0 auto;
+        min-height: 38px;
+        padding: 6px 12px;
+        width: auto;
+      }
+
+      .table-header .actions button:disabled {
+        display: none;
+      }
+
+      .table-wrap {
+        max-height: none;
+      }
+
+      .table-wrap > table,
+      .preview-wrap > table {
+        display: none;
+      }
+
+      .mobile-list {
+        display: block;
+      }
+    }
+
+    @media print {
+      @page {
+        margin: 12mm;
+      }
+
+      body {
+        background: #fff;
+        color: #000;
+        font-size: 11pt;
+      }
+
+      main {
+        width: 100%;
+        padding: 0;
+      }
+
+      .screen-only,
+      .description,
+      .status {
+        display: none !important;
+      }
+
+      .page-header {
+        margin-bottom: 10px;
+      }
+
+      h1 {
+        font-size: 16pt;
+      }
+
+      .panel,
+      .table-panel {
+        border: 0;
+        box-shadow: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .table-header {
+        display: none;
+      }
+
+      .table-wrap {
+        border: 0;
+        max-height: none;
+        overflow: visible;
+      }
+
+      table {
+        min-width: 0;
+        table-layout: auto;
+      }
+
+      .table-wrap > table,
+      .preview-wrap > table {
+        display: table !important;
+      }
+
+      .mobile-list {
+        display: none !important;
+      }
+
+      th {
+        background: #eee !important;
+        color: #000;
+        position: static;
+      }
+
+      tbody tr:nth-child(even) {
+        background: #f2f2f2 !important;
+      }
+
+      .checked-row {
+        display: none !important;
+      }
+
+      th,
+      td {
+        border: 1px solid #777;
+        padding: 3px 4px;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      .bought-header {
+        font-size: 0;
+        line-height: 0;
+      }
+
+      .bought-header::before {
+        content: "";
+      }
+
+      .check-cell {
+        width: 22px;
+        min-width: 22px;
+        max-width: 22px;
+        padding-left: 1px;
+        padding-right: 1px;
+      }
+
+      .check-cell input {
+        appearance: none;
+        border: 1px solid #222;
+        height: 12px;
+        width: 12px;
+      }
+
+      .check-cell input:checked::after {
+        content: "✓";
+        display: block;
+        font-size: 10px;
+        line-height: 10px;
+        text-align: center;
+      }
+
+      .note-input {
+        appearance: none;
+        background: transparent;
+        border: 0;
+        min-height: 24px;
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="page-header">
+      <h1>CSVチェックリスト表作成ツール</h1>
+      <p class="description screen-only">ローカルCSVを読み込み、必要な列だけを選んでチェック欄とメモ欄付きの表を作成します。<br>処理はブラウザ内だけで行い、外部通信は行いません。</p>
+    </header>
+
+    <details class="panel screen-only usage-accordion">
+      <summary>使い方</summary>
+      <div class="usage-body">
+        <ol class="usage-list">
+          <li>CSVファイルを選ぶか、この画面にドラッグ＆ドロップします。</li>
+          <li>表に出したい項目にチェックを入れます。名前は見やすく変更できます。</li>
+          <li>OKを押すと表を生成します。</li>
+          <li>チェックした行は印刷・保存時には除外されます。</li>
+          <li>チェックとメモは自動で保存されます。入力があるときだけ表示クリアを押せます。</li>
+          <li>表示クリアはチェックとメモだけを消します。消した直後は、ブラウザを閉じるまで元に戻せます。</li>
+        </ol>
+      </div>
+    </details>
+
+    <section id="load-panel" class="panel screen-only" aria-labelledby="load-title">
+      <h2 id="load-title">CSVファイル選択</h2>
+      <div class="input-row">
+        <div class="field">
+          <label for="csv-file">CSVファイル</label>
+          <input id="csv-file" type="file" accept=".csv,text/csv">
+        </div>
+      </div>
+      <p id="status" class="status" role="status"></p>
+      <div id="result-summary" class="result-grid hidden" aria-label="CSV読み込み結果">
+        <div class="result-item">
+          <span class="result-label">ファイル名</span>
+          <span id="result-file" class="result-value"></span>
+        </div>
+        <div class="result-item">
+          <span class="result-label">データ行数</span>
+          <span id="result-rows" class="result-value"></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="columns-panel" class="panel screen-only hidden" aria-labelledby="columns-title">
+      <div class="column-toolbar">
+        <h2 id="columns-title">出力列選択</h2>
+        <div class="column-tools">
+          <button id="select-all" type="button">すべて選択</button>
+          <button id="select-none" type="button">すべて解除</button>
+        </div>
+      </div>
+      <div id="column-list" class="column-list" aria-live="polite"></div>
+      <div class="actions" style="margin-top: 14px;">
+        <button id="generate" class="button-primary" type="button">OK</button>
+      </div>
+      <div id="output-preview" class="output-preview"></div>
+    </section>
+
+    <section id="table-panel" class="panel table-panel hidden" aria-labelledby="table-title">
+      <div class="table-header screen-only">
+        <h2 id="table-title">生成された表</h2>
+        <div class="actions">
+          <button id="print" type="button">印刷</button>
+          <button id="download-html" type="button">HTML保存</button>
+          <button id="clear-storage" class="button-danger" type="button" disabled>表示クリア</button>
+          <button id="undo-clear" type="button" disabled>元に戻す</button>
+        </div>
+      </div>
+      <div id="table-wrap" class="table-wrap">
+        <p class="empty">CSVを読み込み、出力列を選択すると表が表示されます。</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const STORAGE_KEY = "csv-checklist-maker:v1";
+      const CLEAR_UNDO_KEY = "csv-checklist-maker:clear-undo:v1";
+
+      const els = {
+        file: document.getElementById("csv-file"),
+        loadPanel: document.getElementById("load-panel"),
+        status: document.getElementById("status"),
+        resultSummary: document.getElementById("result-summary"),
+        resultFile: document.getElementById("result-file"),
+        resultRows: document.getElementById("result-rows"),
+        columnsPanel: document.getElementById("columns-panel"),
+        columnList: document.getElementById("column-list"),
+        selectAll: document.getElementById("select-all"),
+        selectNone: document.getElementById("select-none"),
+        generate: document.getElementById("generate"),
+        outputPreview: document.getElementById("output-preview"),
+        tablePanel: document.getElementById("table-panel"),
+        tableWrap: document.getElementById("table-wrap"),
+        print: document.getElementById("print"),
+        downloadHtml: document.getElementById("download-html"),
+        clearStorage: document.getElementById("clear-storage"),
+        undoClear: document.getElementById("undo-clear")
+      };
+
+      const state = {
+        fileName: "",
+        csvText: "",
+        detectedEncoding: "",
+        headers: [],
+        rows: [],
+        selectedIndexes: [],
+        displayNames: [],
+        checks: [],
+        notes: [],
+        generated: false
+      };
+
+      function setStatus(message, isError = false) {
+        els.status.textContent = message;
+        els.status.classList.toggle("error", isError);
+      }
+
+      function showPanelsAfterLoad() {
+        els.resultSummary.classList.remove("hidden");
+        els.columnsPanel.classList.remove("hidden");
+        els.tablePanel.classList.remove("hidden");
+      }
+
+      function updateResultSummary() {
+        els.resultFile.textContent = state.fileName || "復元データ";
+        els.resultRows.textContent = String(state.rows.length);
+      }
+
+      function normalizeRowLengths(headers, rows) {
+        return rows.map((row) => {
+          const normalized = row.slice(0, headers.length);
+          while (normalized.length < headers.length) {
+            normalized.push("");
+          }
+          return normalized;
+        });
+      }
+
+      // カンマ区切りCSVを文字単位で読み、引用符内の改行やカンマをセル値として残す。
+      function parseCsv(text) {
+        const rows = [];
+        let row = [];
+        let value = "";
+        let quoted = false;
+
+        // RFC 4180に近い形で、引用符内のカンマ・改行・二重引用符を扱う。
+        for (let i = 0; i < text.length; i += 1) {
+          const char = text[i];
+          const next = text[i + 1];
+
+          if (quoted) {
+            if (char === '"' && next === '"') {
+              value += '"';
+              i += 1;
+            } else if (char === '"') {
+              quoted = false;
+            } else {
+              value += char;
+            }
+            continue;
+          }
+
+          if (char === '"') {
+            quoted = true;
+          } else if (char === ",") {
+            row.push(value);
+            value = "";
+          } else if (char === "\r" || char === "\n") {
+            row.push(value);
+            rows.push(row);
+            row = [];
+            value = "";
+            if (char === "\r" && next === "\n") {
+              i += 1;
+            }
+          } else {
+            value += char;
+          }
+        }
+
+        if (quoted) {
+          throw new Error("CSVのダブルクォートが閉じられていません。");
+        }
+
+        if (value !== "" || row.length > 0) {
+          row.push(value);
+          rows.push(row);
+        }
+
+        if (rows.length === 0 || rows[0].length === 0) {
+          throw new Error("ヘッダ行が見つかりません。");
+        }
+
+        return rows;
+      }
+
+      // 自動判定ではUTF-8を優先し、失敗した場合にShift_JIS/CP932互換のデコードへ切り替える。
+      function decodeBuffer(buffer, requestedEncoding) {
+        if (requestedEncoding !== "auto") {
+          return {
+            text: new TextDecoder(requestedEncoding).decode(buffer),
+            encoding: requestedEncoding === "shift_jis" ? "Shift_JIS / CP932" : "UTF-8"
+          };
+        }
+
+        try {
+          return {
+            text: new TextDecoder("utf-8", { fatal: true }).decode(buffer),
+            encoding: "UTF-8"
+          };
+        } catch (utf8Error) {
+          try {
+            return {
+              text: new TextDecoder("shift_jis").decode(buffer),
+              encoding: "Shift_JIS / CP932"
+            };
+          } catch (sjisError) {
+            return {
+              text: new TextDecoder("utf-8").decode(buffer),
+              encoding: "UTF-8"
+            };
+          }
+        }
+      }
+
+      function selectedFromCheckboxes() {
+        return Array.from(els.columnList.querySelectorAll("input[type='checkbox']"))
+          .filter((input) => input.checked)
+          .map((input) => Number(input.value));
+      }
+
+      function columnDisplayName(index) {
+        const displayName = state.displayNames[index];
+        return (displayName && displayName.trim()) || state.headers[index] || `列 ${index + 1}`;
+      }
+
+      function updateDisplayNamesFromInputs() {
+        els.columnList.querySelectorAll(".display-name-input").forEach((input) => {
+          state.displayNames[Number(input.dataset.index)] = input.value;
+        });
+      }
+
+      // CSV本文も保存対象にして、ファイルを選び直さなくても前回状態を復元できるようにする。
+      function saveState() {
+        const payload = {
+          version: 1,
+          fileName: state.fileName,
+          csvText: state.csvText,
+          detectedEncoding: state.detectedEncoding,
+          selectedIndexes: state.selectedIndexes,
+          displayNames: state.displayNames,
+          checks: state.checks,
+          notes: state.notes,
+          generated: state.generated
+        };
+
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+          setStatus("状態を保存しました。");
+        } catch (error) {
+          setStatus("localStorageに保存できませんでした。CSVが大きすぎる可能性があります。", true);
+        }
+      }
+
+      function readClearUndoSnapshot() {
+        try {
+          const saved = sessionStorage.getItem(CLEAR_UNDO_KEY);
+          return saved ? JSON.parse(saved) : null;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function currentSourceKey() {
+        return [
+          state.fileName,
+          state.csvText.length,
+          state.headers.join("\u001f")
+        ].join("\u001e");
+      }
+
+      function updateUndoButton() {
+        const snapshot = readClearUndoSnapshot();
+        const canUndo = Boolean(
+          snapshot &&
+          Array.isArray(snapshot.checks) &&
+          Array.isArray(snapshot.notes) &&
+          snapshot.rowCount === state.rows.length &&
+          snapshot.sourceKey === currentSourceKey() &&
+          state.rows.length > 0
+        );
+        els.undoClear.disabled = !canUndo;
+        els.clearStorage.disabled = state.rows.length === 0 || !hasInputContent();
+      }
+
+      function hasInputContent() {
+        return state.checks.some(Boolean) || state.notes.some((note) => note !== "");
+      }
+
+      function saveClearUndoSnapshot() {
+        const payload = {
+          sourceKey: currentSourceKey(),
+          rowCount: state.rows.length,
+          checks: state.checks.slice(),
+          notes: state.notes.slice()
+        };
+        try {
+          sessionStorage.setItem(CLEAR_UNDO_KEY, JSON.stringify(payload));
+        } catch (error) {
+          // Undo is a convenience feature; clearing should still work if sessionStorage is unavailable.
+        }
+        updateUndoButton();
+      }
+
+      function clearClearUndoSnapshot() {
+        try {
+          sessionStorage.removeItem(CLEAR_UNDO_KEY);
+        } catch (error) {
+          // Ignore unavailable sessionStorage.
+        }
+        updateUndoButton();
+      }
+
+      // CSV由来の文字列はHTMLにせず、textContentでDOMへ入れてXSSを避ける。
+      function renderColumnSelector() {
+        els.columnList.replaceChildren();
+
+        state.headers.forEach((header, index) => {
+          const wrapper = document.createElement("div");
+          wrapper.className = "column-card";
+
+          const input = document.createElement("input");
+          input.type = "checkbox";
+          input.id = `column-${index}`;
+          input.value = String(index);
+          input.checked = state.selectedIndexes.includes(index);
+
+          const body = document.createElement("div");
+          body.className = "column-card-body";
+
+          const label = document.createElement("label");
+          label.htmlFor = input.id;
+          label.className = "column-name";
+          label.textContent = `元: ${header || `列 ${index + 1}`}`;
+
+          const displayInput = document.createElement("input");
+          displayInput.type = "text";
+          displayInput.className = "display-name-input";
+          displayInput.dataset.index = String(index);
+          displayInput.value = state.displayNames[index] || header || `列 ${index + 1}`;
+          displayInput.setAttribute("aria-label", `${header || `列 ${index + 1}`} の表示名`);
+
+          body.append(label, displayInput);
+          wrapper.append(input, body);
+          els.columnList.append(wrapper);
+        });
+
+        renderOutputPreview();
+      }
+
+      function renderOutputPreview() {
+        els.outputPreview.replaceChildren();
+
+        if (state.headers.length === 0) {
+          return;
+        }
+
+        const title = document.createElement("h3");
+        title.textContent = "出力イメージ（先頭データ）";
+        els.outputPreview.append(title);
+
+        if (state.selectedIndexes.length === 0) {
+          const empty = document.createElement("p");
+          empty.className = "status";
+          empty.textContent = "出力する列を選択してください。";
+          els.outputPreview.append(empty);
+          return;
+        }
+
+        const tableWrap = document.createElement("div");
+        tableWrap.className = "preview-wrap";
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const tbody = document.createElement("tbody");
+        const headerRow = document.createElement("tr");
+        const sampleRow = document.createElement("tr");
+        const sample = state.rows[0] || [];
+
+        const boughtHeader = document.createElement("th");
+        boughtHeader.className = "bought-header";
+        boughtHeader.textContent = "";
+        headerRow.append(boughtHeader);
+
+        const boughtCell = document.createElement("td");
+        boughtCell.className = "check-cell";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.disabled = true;
+        boughtCell.append(checkbox);
+        sampleRow.append(boughtCell);
+
+        state.selectedIndexes.forEach((index) => {
+          const th = document.createElement("th");
+          th.textContent = columnDisplayName(index);
+          headerRow.append(th);
+
+          const td = document.createElement("td");
+          td.textContent = sample[index] || "";
+          sampleRow.append(td);
+        });
+
+        const noteHeader = document.createElement("th");
+        noteHeader.textContent = "メモ";
+        headerRow.append(noteHeader);
+
+        const noteCell = document.createElement("td");
+        noteCell.className = "note-cell";
+        const note = document.createElement("input");
+        note.className = "note-input";
+        note.type = "text";
+        note.disabled = true;
+        noteCell.append(note);
+        sampleRow.append(noteCell);
+
+        thead.append(headerRow);
+        tbody.append(sampleRow);
+        table.append(thead, tbody);
+        tableWrap.append(table);
+
+        const mobilePreview = document.createElement("div");
+        mobilePreview.className = "mobile-list";
+        const mobileRow = document.createElement("div");
+        mobileRow.className = "mobile-row";
+        const mobileCheck = document.createElement("div");
+        mobileCheck.className = "mobile-check";
+        const mobileCheckbox = document.createElement("input");
+        mobileCheckbox.type = "checkbox";
+        mobileCheckbox.disabled = true;
+        mobileCheck.append(mobileCheckbox);
+        const mobileFields = document.createElement("div");
+        mobileFields.className = "mobile-fields";
+
+        state.selectedIndexes.forEach((index) => {
+          const field = document.createElement("div");
+          field.className = "mobile-field";
+          const label = document.createElement("div");
+          label.className = "mobile-label";
+          label.textContent = columnDisplayName(index);
+          const value = document.createElement("div");
+          value.className = "mobile-value";
+          value.textContent = sample[index] || "";
+          field.append(label, value);
+          mobileFields.append(field);
+        });
+
+        const mobileNote = document.createElement("div");
+        mobileNote.className = "mobile-field mobile-note";
+        const mobileNoteLabel = document.createElement("div");
+        mobileNoteLabel.className = "mobile-label";
+        mobileNoteLabel.textContent = "メモ";
+        const mobileNoteInput = document.createElement("input");
+        mobileNoteInput.className = "note-input";
+        mobileNoteInput.type = "text";
+        mobileNoteInput.disabled = true;
+        mobileNote.append(mobileNoteLabel, mobileNoteInput);
+        mobileFields.append(mobileNote);
+
+        mobileRow.append(mobileCheck, mobileFields);
+        mobilePreview.append(mobileRow);
+        tableWrap.append(mobilePreview);
+        els.outputPreview.append(tableWrap);
+      }
+
+      function applyCsvText(csvText, meta = {}) {
+        const parsed = parseCsv(csvText.replace(/^\uFEFF/, ""));
+        const headers = parsed[0];
+        const rows = normalizeRowLengths(headers, parsed.slice(1));
+
+        state.fileName = meta.fileName || "";
+        state.csvText = csvText;
+        state.detectedEncoding = meta.encoding || "";
+        state.headers = headers;
+        state.rows = rows;
+        state.selectedIndexes = meta.selectedIndexes || headers.map((_, index) => index);
+        state.displayNames = Array.isArray(meta.displayNames) ? meta.displayNames : headers.slice();
+        state.checks = meta.checks || Array(rows.length).fill(false);
+        state.notes = meta.notes || Array(rows.length).fill("");
+        state.generated = Boolean(meta.generated);
+
+        while (state.checks.length < rows.length) {
+          state.checks.push(false);
+        }
+        while (state.notes.length < rows.length) {
+          state.notes.push("");
+        }
+        state.checks = state.checks.slice(0, rows.length);
+        state.notes = state.notes.slice(0, rows.length);
+        state.selectedIndexes = state.selectedIndexes.filter((index) => index >= 0 && index < headers.length);
+        state.displayNames = headers.map((header, index) => state.displayNames[index] || header || `列 ${index + 1}`);
+
+        showPanelsAfterLoad();
+        updateResultSummary();
+        renderColumnSelector();
+        updateUndoButton();
+
+        if (state.generated) {
+          renderTable();
+        } else {
+          renderEmptyTable();
+        }
+      }
+
+      function renderEmptyTable() {
+        els.tableWrap.replaceChildren();
+        const empty = document.createElement("p");
+        empty.className = "empty";
+        empty.textContent = "出力列を選択してOKを押すと表が表示されます。";
+        els.tableWrap.append(empty);
+      }
+
+      function syncRowControls(rowIndex, source) {
+        const checked = Boolean(state.checks[rowIndex]);
+        const noteValue = state.notes[rowIndex] || "";
+
+        document.querySelectorAll(`[data-control="check"][data-row-index="${rowIndex}"]`).forEach((input) => {
+          if (input !== source) {
+            input.checked = checked;
+          }
+        });
+        document.querySelectorAll(`[data-control="note"][data-row-index="${rowIndex}"]`).forEach((input) => {
+          if (input !== source) {
+            input.value = noteValue;
+          }
+        });
+        document.querySelectorAll(`[data-row-shell][data-row-index="${rowIndex}"]`).forEach((row) => {
+          row.classList.toggle("checked-row", checked);
+        });
+      }
+
+      function handleCheckChange(input, rowIndex) {
+        state.checks[rowIndex] = input.checked;
+        syncRowControls(rowIndex, input);
+        updateUndoButton();
+        saveState();
+      }
+
+      function handleNoteInput(input, rowIndex) {
+        state.notes[rowIndex] = input.value;
+        syncRowControls(rowIndex, input);
+        updateUndoButton();
+        saveState();
+      }
+
+      function createMobileList() {
+        const list = document.createElement("div");
+        list.className = "mobile-list";
+
+        state.rows.forEach((row, rowIndex) => {
+          const item = document.createElement("div");
+          item.className = "mobile-row";
+          item.dataset.rowShell = "true";
+          item.dataset.rowIndex = String(rowIndex);
+          item.classList.toggle("checked-row", Boolean(state.checks[rowIndex]));
+
+          const checkWrap = document.createElement("div");
+          checkWrap.className = "mobile-check";
+          const check = document.createElement("input");
+          check.type = "checkbox";
+          check.checked = Boolean(state.checks[rowIndex]);
+          check.dataset.control = "check";
+          check.dataset.rowIndex = String(rowIndex);
+          check.setAttribute("aria-label", `${rowIndex + 1}行目のチェック`);
+          check.addEventListener("change", () => handleCheckChange(check, rowIndex));
+          checkWrap.append(check);
+
+          const fields = document.createElement("div");
+          fields.className = "mobile-fields";
+
+          state.selectedIndexes.forEach((colIndex) => {
+            const field = document.createElement("div");
+            field.className = "mobile-field";
+
+            const label = document.createElement("div");
+            label.className = "mobile-label";
+            label.textContent = columnDisplayName(colIndex);
+
+            const value = document.createElement("div");
+            value.className = "mobile-value";
+            value.textContent = row[colIndex] || "";
+
+            field.append(label, value);
+            fields.append(field);
+          });
+
+          const noteField = document.createElement("div");
+          noteField.className = "mobile-field mobile-note";
+          const noteLabel = document.createElement("div");
+          noteLabel.className = "mobile-label";
+          noteLabel.textContent = "メモ";
+          const note = document.createElement("input");
+          note.className = "note-input";
+          note.type = "text";
+          note.value = state.notes[rowIndex] || "";
+          note.dataset.control = "note";
+          note.dataset.rowIndex = String(rowIndex);
+          note.setAttribute("aria-label", `${rowIndex + 1}行目のメモ`);
+          note.addEventListener("input", () => handleNoteInput(note, rowIndex));
+          noteField.append(noteLabel, note);
+          fields.append(noteField);
+
+          item.append(checkWrap, fields);
+          list.append(item);
+        });
+
+        return list;
+      }
+
+      // 表本体もCSV値をtextContentで描画し、チェックとメモの変更だけを保存する。
+      function renderTable() {
+        els.tableWrap.replaceChildren();
+
+        if (state.selectedIndexes.length === 0) {
+          renderEmptyTable();
+          setStatus("出力する列を1つ以上選択してください。", true);
+          return;
+        }
+
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const tbody = document.createElement("tbody");
+        const headerRow = document.createElement("tr");
+
+        const boughtHeader = document.createElement("th");
+        boughtHeader.className = "bought-header";
+        boughtHeader.textContent = "";
+        headerRow.append(boughtHeader);
+
+        state.selectedIndexes.forEach((index) => {
+          const th = document.createElement("th");
+          th.textContent = columnDisplayName(index);
+          headerRow.append(th);
+        });
+
+        const noteHeader = document.createElement("th");
+        noteHeader.textContent = "メモ";
+        headerRow.append(noteHeader);
+        thead.append(headerRow);
+
+        state.rows.forEach((row, rowIndex) => {
+          const tr = document.createElement("tr");
+          tr.dataset.rowShell = "true";
+          tr.dataset.rowIndex = String(rowIndex);
+          tr.classList.toggle("checked-row", Boolean(state.checks[rowIndex]));
+
+          const checkTd = document.createElement("td");
+          checkTd.className = "check-cell";
+          const check = document.createElement("input");
+          check.type = "checkbox";
+          check.checked = Boolean(state.checks[rowIndex]);
+          check.dataset.control = "check";
+          check.dataset.rowIndex = String(rowIndex);
+          check.setAttribute("aria-label", `${rowIndex + 1}行目のチェック`);
+          check.addEventListener("change", () => handleCheckChange(check, rowIndex));
+          checkTd.append(check);
+          tr.append(checkTd);
+
+          state.selectedIndexes.forEach((colIndex) => {
+            const td = document.createElement("td");
+            td.textContent = row[colIndex] || "";
+            tr.append(td);
+          });
+
+          const noteTd = document.createElement("td");
+          noteTd.className = "note-cell";
+          const note = document.createElement("input");
+          note.className = "note-input";
+          note.type = "text";
+          note.value = state.notes[rowIndex] || "";
+          note.dataset.control = "note";
+          note.dataset.rowIndex = String(rowIndex);
+          note.setAttribute("aria-label", `${rowIndex + 1}行目のメモ`);
+          note.addEventListener("input", () => handleNoteInput(note, rowIndex));
+          noteTd.append(note);
+          tr.append(noteTd);
+
+          tbody.append(tr);
+        });
+
+        table.append(thead, tbody);
+        els.tableWrap.append(table);
+        els.tableWrap.append(createMobileList());
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function escapeAttr(value) {
+        return escapeHtml(value).replace(/\n/g, "&#10;");
+      }
+
+      // ダウンロード用HTMLは文字列で組み立てるため、CSV値とメモを必ずエスケープする。
+      function buildStandaloneHtml() {
+        const checklistId = `checklist-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        const headerCells = [
+          "<th class=\"bought-header\"></th>",
+          ...state.selectedIndexes.map((index) => `<th>${escapeHtml(columnDisplayName(index))}</th>`),
+          "<th>メモ</th>"
+        ].join("");
+
+        const outputRows = state.rows
+          .map((row, rowIndex) => ({ row, rowIndex }))
+          .filter(({ rowIndex }) => !state.checks[rowIndex]);
+
+        const bodyRows = outputRows
+          .map(({ row, rowIndex }, outputIndex) => {
+            const cells = state.selectedIndexes
+              .map((colIndex) => `<td>${escapeHtml(row[colIndex] || "")}</td>`)
+              .join("");
+            return `<tr data-row-shell data-row-index="${outputIndex}"><td class="check-cell"><input type="checkbox" data-control="check" data-row-index="${outputIndex}"></td>${cells}<td><input type="text" data-control="note" data-row-index="${outputIndex}" value="${escapeAttr(state.notes[rowIndex] || "")}"></td></tr>`;
+          }).join("\n");
+
+        const mobileRows = outputRows
+          .map(({ row, rowIndex }, outputIndex) => {
+            const fields = state.selectedIndexes.map((colIndex) => `
+      <div class="mobile-field">
+        <div class="mobile-label">${escapeHtml(columnDisplayName(colIndex))}</div>
+        <div class="mobile-value">${escapeHtml(row[colIndex] || "")}</div>
+      </div>`).join("");
+            return `<div class="mobile-row" data-row-shell data-row-index="${outputIndex}">
+    <div class="mobile-check"><input type="checkbox" data-control="check" data-row-index="${outputIndex}"></div>
+    <div class="mobile-fields">${fields}
+      <div class="mobile-field mobile-note">
+        <div class="mobile-label">メモ</div>
+        <input type="text" data-control="note" data-row-index="${outputIndex}" value="${escapeAttr(state.notes[rowIndex] || "")}">
+      </div>
+    </div>
+  </div>`;
+          }).join("\n");
+
+        return `<!doctype html>
+<html lang="ja" data-checklist-id="${checklistId}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>保存用チェックリスト表</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { color: #20242c; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 20px; }
+    h1 { font-size: 1.4rem; margin: 0 0 14px; }
+    .actions { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    button { border: 1px solid #aab3c2; border-radius: 6px; background: #fff; cursor: pointer; min-height: 38px; padding: 7px 12px; }
+    .status { color: #687184; min-height: 1.5em; }
+    .table-wrap { overflow: auto; }
+    table { border-collapse: collapse; width: 100%; min-width: 720px; }
+    th, td { border: 1px solid #d9dee8; padding: 8px 10px; text-align: left; vertical-align: top; white-space: pre-wrap; overflow-wrap: anywhere; }
+    th { background: #eef2f6; }
+    tbody tr:nth-child(even) { background: #f3f4f6; }
+    .check-cell { text-align: center; width: 36px; }
+    .check-cell input { height: 22px; width: 22px; }
+    td input[type="text"] { border: 1px solid #aab3c2; border-radius: 4px; min-height: 36px; padding: 6px 8px; width: 100%; }
+    .mobile-list { display: none; }
+    .mobile-row { display: grid; grid-template-columns: 38px minmax(0, 1fr); border-left: 1px solid #aab3c2; background: #fff; }
+    .mobile-row:first-child { border-top: 1px solid #aab3c2; }
+    .mobile-row:nth-child(even) { background: #f3f4f6; }
+    .mobile-check { align-items: start; border-bottom: 1px solid #aab3c2; border-right: 1px solid #aab3c2; display: flex; justify-content: center; padding-top: 16px; }
+    .mobile-check input { height: 22px; width: 22px; }
+    .mobile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .mobile-field { border-bottom: 1px solid #aab3c2; border-right: 1px solid #aab3c2; min-width: 0; padding: 8px 9px; }
+    .mobile-label { color: #687184; font-size: 0.78rem; font-weight: 750; overflow-wrap: anywhere; }
+    .mobile-value { margin-top: 3px; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .mobile-note { grid-column: 1 / -1; }
+    .mobile-note input { border: 1px solid #aab3c2; border-radius: 4px; min-height: 36px; padding: 6px 8px; width: 100%; }
+    @media (max-width: 720px) {
+      body { margin: 10px; }
+      .table-wrap > table { display: none; }
+      .mobile-list { display: block; }
+    }
+    @media print {
+      body { margin: 0; font-size: 11pt; }
+      .actions { display: none; }
+      table { min-width: 0; }
+      .table-wrap > table { display: table !important; }
+      .mobile-list { display: none !important; }
+      th, td { border-color: #777; padding: 3px 4px; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      th { background: #eee !important; }
+      tbody tr:nth-child(even) { background: #f2f2f2 !important; }
+      .checked-row { display: none !important; }
+      .bought-header { font-size: 0; line-height: 0; }
+      .bought-header::before { content: ""; }
+      .check-cell { width: 22px; min-width: 22px; max-width: 22px; padding-left: 1px; padding-right: 1px; }
+      .check-cell input { height: 12px; width: 12px; }
+      td input[type="text"] { appearance: none; background: transparent; border: 0; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <h1>保存用チェックリスト表</h1>
+  <div class="actions">
+    <button type="button" onclick="window.print()">印刷</button>
+    <button id="save-file" type="button">HTML保存</button>
+    <span id="status" class="status" role="status"></span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>${headerCells}</tr></thead>
+      <tbody>
+${bodyRows}
+      </tbody>
+    </table>
+    <div class="mobile-list">
+${mobileRows}
+    </div>
+  </div>
+  <script>
+    (() => {
+      "use strict";
+
+      const STORAGE_KEY = "csv-checklist-table:" + (document.documentElement.dataset.checklistId || location.pathname);
+      const status = document.getElementById("status");
+
+      function setStatus(message) {
+        status.textContent = message;
+      }
+
+      function getInputs() {
+        return {
+          checks: Array.from(document.querySelectorAll('input[type="checkbox"]')),
+          notes: Array.from(document.querySelectorAll('input[type="text"]'))
+        };
+      }
+
+      function rowIndexes() {
+        return Array.from(new Set(
+          Array.from(document.querySelectorAll("[data-row-shell]"))
+            .map((row) => row.dataset.rowIndex)
+        ));
+      }
+
+      function syncRow(rowIndex, source) {
+        const checks = Array.from(document.querySelectorAll('[data-control="check"][data-row-index="' + rowIndex + '"]'));
+        const notes = Array.from(document.querySelectorAll('[data-control="note"][data-row-index="' + rowIndex + '"]'));
+        const checked = source && source.dataset.control === "check" ? source.checked : Boolean(checks[0] && checks[0].checked);
+        const noteValue = source && source.dataset.control === "note" ? source.value : (notes[0] ? notes[0].value : "");
+        checks.forEach((input) => {
+          input.checked = checked;
+        });
+        notes.forEach((input) => {
+          input.value = noteValue;
+        });
+        document.querySelectorAll('[data-row-shell][data-row-index="' + rowIndex + '"]').forEach((row) => {
+          row.classList.toggle("checked-row", checked);
+        });
+      }
+
+      function syncAllRows() {
+        rowIndexes().forEach((rowIndex) => syncRow(rowIndex));
+      }
+
+      function syncInputAttributes() {
+        syncAllRows();
+        const inputs = getInputs();
+        inputs.checks.forEach((input) => {
+          if (input.checked) {
+            input.setAttribute("checked", "");
+          } else {
+            input.removeAttribute("checked");
+          }
+        });
+        inputs.notes.forEach((input) => {
+          input.setAttribute("value", input.value);
+        });
+      }
+
+      function getCurrentHtml() {
+        syncInputAttributes();
+        return "<!doctype html>\\n" + document.documentElement.outerHTML;
+      }
+
+      function saveLocal() {
+        const inputs = getInputs();
+        const payload = {
+          checks: inputs.checks.map((input) => input.checked),
+          notes: inputs.notes.map((input) => input.value)
+        };
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+          setStatus("このHTML内の状態を保存しました。");
+        } catch (error) {
+          setStatus("ブラウザ保存に失敗しました。");
+        }
+      }
+
+      function restoreLocal() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) {
+          return;
+        }
+        try {
+          const payload = JSON.parse(saved);
+          const inputs = getInputs();
+          if (Array.isArray(payload.checks)) {
+            payload.checks.forEach((checked, index) => {
+              if (inputs.checks[index]) {
+                inputs.checks[index].checked = Boolean(checked);
+              }
+            });
+          }
+          if (Array.isArray(payload.notes)) {
+            payload.notes.forEach((note, index) => {
+              if (inputs.notes[index]) {
+                inputs.notes[index].value = String(note);
+              }
+            });
+          }
+          syncInputAttributes();
+          setStatus("保存済みの状態を復元しました。");
+        } catch (error) {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+
+      function downloadUpdatedHtml() {
+        const html = getCurrentHtml();
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "csv-checklist-table-updated.html";
+        document.body.append(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        setStatus("現在の状態を反映したHTMLをダウンロードしました。");
+      }
+
+      async function saveHtmlToFile() {
+        saveLocal();
+
+        if (!("showSaveFilePicker" in window)) {
+          downloadUpdatedHtml();
+          setStatus("このブラウザは直接保存に未対応です。ダウンロード保存しました。");
+          return;
+        }
+
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: "csv-checklist-table.html",
+            types: [{
+              description: "HTML file",
+              accept: { "text/html": [".html", ".htm"] }
+            }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(getCurrentHtml());
+          await writable.close();
+          setStatus("現在の状態をHTMLファイルに保存しました。");
+        } catch (error) {
+          if (error && error.name === "AbortError") {
+            setStatus("保存をキャンセルしました。");
+            return;
+          }
+          downloadUpdatedHtml();
+          setStatus("直接保存に失敗したため、ダウンロード保存しました。");
+        }
+      }
+
+      document.addEventListener("change", (event) => {
+        if (event.target instanceof HTMLInputElement) {
+          if (event.target.dataset.rowIndex) {
+            syncRow(event.target.dataset.rowIndex, event.target);
+          }
+          saveLocal();
+        }
+      });
+
+      document.addEventListener("input", (event) => {
+        if (event.target instanceof HTMLInputElement && event.target.type === "text") {
+          if (event.target.dataset.rowIndex) {
+            syncRow(event.target.dataset.rowIndex, event.target);
+          }
+          saveLocal();
+        }
+      });
+
+      document.getElementById("save-file").addEventListener("click", saveHtmlToFile);
+
+      syncAllRows();
+      restoreLocal();
+    })();
+  <\/script>
+</body>
+</html>`;
+      }
+
+      function downloadStandaloneHtml() {
+        if (!state.generated || state.selectedIndexes.length === 0) {
+          setStatus("保存用HTMLを作成する前に表を生成してください。", true);
+          return;
+        }
+
+        const blob = new Blob([buildStandaloneHtml()], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "csv-checklist-table.html";
+        document.body.append(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function clearInputs() {
+        if (state.rows.length === 0 || !hasInputContent()) {
+          updateUndoButton();
+          setStatus("クリアする入力がありません。", true);
+          return;
+        }
+        saveClearUndoSnapshot();
+        state.checks = Array(state.rows.length).fill(false);
+        state.notes = Array(state.rows.length).fill("");
+        renderOutputPreview();
+        if (state.generated) {
+          renderTable();
+        }
+        saveState();
+        updateUndoButton();
+        setStatus("チェックとメモをクリアしました。");
+      }
+
+      function undoClearInputs() {
+        const snapshot = readClearUndoSnapshot();
+        if (
+          !snapshot ||
+          !Array.isArray(snapshot.checks) ||
+          !Array.isArray(snapshot.notes) ||
+          snapshot.rowCount !== state.rows.length ||
+          snapshot.sourceKey !== currentSourceKey()
+        ) {
+          updateUndoButton();
+          setStatus("元に戻せる内容がありません。", true);
+          return;
+        }
+
+        state.checks = snapshot.checks.slice(0, state.rows.length);
+        state.notes = snapshot.notes.slice(0, state.rows.length);
+        while (state.checks.length < state.rows.length) {
+          state.checks.push(false);
+        }
+        while (state.notes.length < state.rows.length) {
+          state.notes.push("");
+        }
+        renderOutputPreview();
+        if (state.generated) {
+          renderTable();
+        }
+        saveState();
+        clearClearUndoSnapshot();
+        setStatus("表示クリア前のチェックとメモに戻しました。");
+      }
+
+      async function loadFile(file) {
+        const buffer = await file.arrayBuffer();
+        const decoded = decodeBuffer(buffer, "auto");
+        applyCsvText(decoded.text, {
+          fileName: file.name,
+          encoding: decoded.encoding,
+          generated: false
+        });
+        saveState();
+        setStatus("CSVを読み込みました。出力する列を選択してください。");
+      }
+
+      function restoreSavedState() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (!saved) {
+          return;
+        }
+
+        try {
+          const parsed = JSON.parse(saved);
+          if (!parsed || parsed.version !== 1 || typeof parsed.csvText !== "string") {
+            return;
+          }
+          applyCsvText(parsed.csvText, {
+            fileName: parsed.fileName || "復元データ",
+            encoding: parsed.detectedEncoding || "保存データ",
+            selectedIndexes: Array.isArray(parsed.selectedIndexes) ? parsed.selectedIndexes : undefined,
+            displayNames: Array.isArray(parsed.displayNames) ? parsed.displayNames : undefined,
+            checks: Array.isArray(parsed.checks) ? parsed.checks : undefined,
+            notes: Array.isArray(parsed.notes) ? parsed.notes : undefined,
+            generated: Boolean(parsed.generated)
+          });
+          setStatus("前回の保存データを復元しました。");
+        } catch (error) {
+          localStorage.removeItem(STORAGE_KEY);
+          setStatus("保存データを復元できなかったため削除しました。", true);
+        }
+      }
+
+      els.file.addEventListener("change", async () => {
+        const file = els.file.files && els.file.files[0];
+        if (!file) {
+          return;
+        }
+
+        try {
+          await loadFile(file);
+        } catch (error) {
+          setStatus(error.message || "CSVを読み込めませんでした。", true);
+        }
+      });
+
+      ["dragenter", "dragover"].forEach((eventName) => {
+        els.loadPanel.addEventListener(eventName, (event) => {
+          event.preventDefault();
+          els.loadPanel.classList.add("drop-active");
+        });
+      });
+
+      ["dragleave", "drop"].forEach((eventName) => {
+        els.loadPanel.addEventListener(eventName, () => {
+          els.loadPanel.classList.remove("drop-active");
+        });
+      });
+
+      els.loadPanel.addEventListener("drop", async (event) => {
+        event.preventDefault();
+        const file = event.dataTransfer && event.dataTransfer.files[0];
+        if (!file) {
+          return;
+        }
+
+        try {
+          await loadFile(file);
+        } catch (error) {
+          setStatus(error.message || "CSVを読み込めませんでした。", true);
+        }
+      });
+
+      els.selectAll.addEventListener("click", () => {
+        els.columnList.querySelectorAll("input[type='checkbox']").forEach((input) => {
+          input.checked = true;
+        });
+        state.selectedIndexes = selectedFromCheckboxes();
+        renderOutputPreview();
+        if (state.generated) {
+          renderTable();
+        }
+        saveState();
+      });
+
+      els.selectNone.addEventListener("click", () => {
+        els.columnList.querySelectorAll("input[type='checkbox']").forEach((input) => {
+          input.checked = false;
+        });
+        state.selectedIndexes = selectedFromCheckboxes();
+        renderOutputPreview();
+        if (state.generated) {
+          renderTable();
+        }
+        saveState();
+      });
+
+      els.columnList.addEventListener("change", (event) => {
+        if (event.target instanceof HTMLInputElement && event.target.type === "checkbox") {
+          state.selectedIndexes = selectedFromCheckboxes();
+          renderOutputPreview();
+          if (state.generated) {
+            renderTable();
+          }
+          saveState();
+        }
+      });
+
+      els.columnList.addEventListener("input", (event) => {
+        if (event.target instanceof HTMLInputElement && event.target.classList.contains("display-name-input")) {
+          updateDisplayNamesFromInputs();
+          renderOutputPreview();
+          if (state.generated) {
+            renderTable();
+          }
+          saveState();
+        }
+      });
+
+      els.generate.addEventListener("click", () => {
+        updateDisplayNamesFromInputs();
+        state.selectedIndexes = selectedFromCheckboxes();
+        state.generated = true;
+        renderOutputPreview();
+        renderTable();
+        saveState();
+      });
+
+      els.print.addEventListener("click", () => {
+        window.print();
+      });
+
+      els.downloadHtml.addEventListener("click", downloadStandaloneHtml);
+      els.clearStorage.addEventListener("click", clearInputs);
+      els.undoClear.addEventListener("click", undoClearInputs);
+
+      restoreSavedState();
+      updateUndoButton();
+    })();
+  </script>
+</body>
+</html>
